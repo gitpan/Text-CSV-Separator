@@ -5,11 +5,11 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Exporter;
 use base 'Exporter';
-our @EXPORT = qw(get_separator);
+our @EXPORT_OK = qw(get_separator);
 
 
 sub get_separator {
@@ -49,20 +49,21 @@ sub get_separator {
     }
     
     if (scalar(keys %survivors) == 0) {
-        die "No candidates left!";
+        croak "No candidates left!";
     }
-    
     
     my $csv;
     if (-e $file_path) {
-        open ($csv, "<:crlf", $file_path) || croak "Couldn't open csv file: $!";
+        open ($csv, "<:crlf", $file_path) ||
+        croak "Couldn't open $file_path: $!";
     } else {
-        croak "Couldn't find the specified file.\n";
+        croak "Couldn't find $file_path.\n";
     }
     
     while (<$csv>) {
         my $record = $_;
         chomp $record;
+        
         
         foreach my $candidate (keys %survivors) {
             
@@ -70,7 +71,6 @@ sub get_separator {
             
             my $count = 0;
             $count++ while ($record =~ /$rex/g);
-            
             
             if ($count > 0) {
                 push @{$survivors{$candidate}}, $count;
@@ -85,18 +85,18 @@ sub get_separator {
         }
     }
     
-    #  More than 1 survivor. 2nd pass to determine variability of candidate counts.
+    #  More than 1 survivor. 2nd pass to determine count variability
     my %std_dev;
     foreach my $candidate (keys %survivors) {
         my $mean = _mean(@{$survivors{$candidate}});
         $std_dev{$candidate} = _std_dev($mean, @{$survivors{$candidate}});
     }
     
+    
     close $csv;
     
     return (sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors);
 }
-
 
 sub _mean {
     my @array = @_;
@@ -108,7 +108,6 @@ sub _mean {
     
     return $mean;
 }
-
 
 sub _std_dev {
     my ($mean, @array) = @_;
@@ -133,7 +132,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 SYNOPSIS
 
-    use Text::CSV::Separator;
+    use Text::CSV::Separator qw(get_separator);
     
     my @char_list = get_separator(
                                     path => $csv_path,
@@ -145,23 +144,26 @@ Text::CSV::Separator - Determine the field separator of a CSV file
     my $char_count = @char_list;
     
     my $separator;
-    if ($char_count == 1) {        # successful detection, we've got a winner
+    if ($char_count == 1) {       # successful detection, we've got a winner
       $separator = $char_list[0];
       
-    } elsif  ($char_count > 1) {   # several candidates passed the tests
+    } elsif  ($char_count > 1) {  # several candidates passed the tests
       warning message or any other action
       
-    } else {                       # none of the candidates passed the tests
+    } else {                      # none of the candidates passed the tests
       warning message or any other action
       
     }
 
 =head1 DESCRIPTION
 
-This module provides a fast detection of the field separator character of a
-CSV file, and returns it ready to use in a CSV parser (e.g., Text::CSV_XS,
-Tie::CSV_File, or Text::CSV::Simple). 
-This may be useful when processing batches of heterogeneous CSV files.
+This module provides a fast detection of the field separator character (also
+called field delimiter) of a CSV file, or more generally, of a character
+separated text file (also called delimited text file), and returns it ready
+to use in a CSV parser (e.g., Text::CSV_XS, Tie::CSV_File, or
+Text::CSV::Simple). 
+This may be useful to the vulnerable population of programmers who need to
+process automatically CSV files from different sources.
 
 The default set of candidates contains the following characters:
 ',' ';' ':' '|' '\t'
@@ -180,39 +182,89 @@ The technique used is based on the following principle:
 
 =item *
 
-The number of instances of the separator character contained in a line must be
-an integer constant > 0 for all the lines in the file (although some of these
-instances can be escaped literal characters).
+For every line in the file, the number of instances of the separator
+character acting as separators must be an integer constant > 0 , although
+a line may also contain some instances of that character as escaped
+literal characters.
 
 =item *
 
-Most of the other candidates won't appear in a typical CSV line (they will be
-removed from the candidates list as soon as they miss a line).
+Most of the other candidates won't appear in a typical CSV line.
 
 =back
 
+The candidates will be removed from the candidates list as soon as they miss
+a line.
+
 This is the first test done to the CSV file. In most cases, it will detect the
-separator after processing the first few rows.
+separator after processing the first few lines. In particular, if the file
+contains a header line, one line will probably be enough to get the job done.
 Processing will stop and return control to the caller as soon as the program
 reaches a status of 1 single candidate (or 0 candidates left).
 
 If the routine cannot determine the separator in the first pass, it will do
 a second pass based on a heuristic technique: even if the other candidates
-appear in many lines, their count will likely vary significantly in the
+appear in every line, their count will likely vary significantly in the
 different lines. So it measures the variability of the remaining candidates and
 returns the list of possible separators sorted by their likelihood, being the
 first array item the most probable separator.
 Since this is a rule of thumb, you can always create a CSV file that breaks
 this logic. Nevertheless, it will work correctly in many cases.
 The possibility of excluding some of the default candidates may help to resolve
-cases with more than one possible winner.
+cases with several possible winners.
 
+
+=head1 EXAMPLE
+
+Consider the following scenario: Your program must process a batch of csv files,
+and you know that the separator could be a comma, a semicolon or a tab.
+You also know that one of the fields contains time values. This field will
+provide a fixed number of colons that could mislead the detection code.
+In this case, you should exclude the colon (and you can also exclude the other
+default candidate not considered, the pipe character):
+  
+    my @char_list = get_separator(path => $csv_path, exclude => [':', '|']);
+  
+    my $char_count = @char_list;
+    
+    my $separator;
+    if ($char_count == 1) {       
+      $separator = $char_list[0];
+    } 
+    ...
+
+
+=head1 MOTIVATION
+
+Despite the popularity of XML, the CSV file format is still widely used
+for data exchange between applications, because of its much lower overhead:
+it requires much less bandwidth and storage space than XML, and it also has
+a better performance under compression.
+
+Unfortunately, there is no formal specification of the CSV format.
+The Microsoft Excel implementation is the most widely used and it has become
+a de facto standard, but the variations are almost endless.
+
+One of the differences is the field separator character used.
+CSV stands for "comma-separated values", but most of the spreadsheet
+applications let the user select the field delimiter from a list of several
+different characters when saving or exporting data to a CSV file.
+Furthermore, in a Windows system, when you save a spreadsheet in Excel as a
+CSV file, Excel will use as the field delimiter the default list separator of
+your system's locale, which happens to be a semicolon for several European
+languages. You can even customize this setting and use the list separator you
+like. That's why this particular difference can make it really hard to process
+heterogeneous CSV files automatically.
+
+This module can be used to determine the separator character of a delimited
+text file of any kind, but since the aforementioned ambiguity problems occur
+mainly in CSV files, I decided to use the Text::CSV:: namespace.
 
 =head2 EXPORT
 
 =over
 
-=item get_separator
+=item None by default.
 
 =back
 
