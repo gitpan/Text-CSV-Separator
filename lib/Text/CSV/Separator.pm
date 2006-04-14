@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Exporter;
 use base 'Exporter';
@@ -25,6 +25,11 @@ sub get_separator {
     
     if (exists $options{include}) {
         @included = @{$options{include}};
+    }
+    
+    my $lucky;
+    if (exists $options{lucky} && $options{lucky} == 1) {
+        $lucky = 1;
     }
 
     
@@ -52,6 +57,7 @@ sub get_separator {
         croak "No candidates left!";
     }
     
+    
     my $csv;
     if (-e $file_path) {
         open ($csv, "<:crlf", $file_path) ||
@@ -64,7 +70,6 @@ sub get_separator {
         my $record = $_;
         chomp $record;
         
-        
         foreach my $candidate (keys %survivors) {
             
             my $rex = qr/\Q$candidate\E/;
@@ -72,30 +77,42 @@ sub get_separator {
             my $count = 0;
             $count++ while ($record =~ /$rex/g);
             
-            if ($count > 0) {
+            if ($count > 0 && !$lucky) {
                 push @{$survivors{$candidate}}, $count;
-            } else {
+            } elsif ($count == 0) {
                 delete $survivors{$candidate};
             }
             
         }
-        if (scalar(keys %survivors) == 1 || scalar (keys %survivors) == 0) {
+        my @alive = keys %survivors;
+        my $survivors_count = @alive;
+        if ($survivors_count == 1 || $survivors_count == 0) {
             close $csv;
-            return (keys %survivors);
+            if (!$lucky) {
+                return @alive;
+            } elsif ($survivors_count == 1) {
+                return $alive[0];
+            } else {
+                croak "No candidates left!\n";
+            }
         }
     }
     
     #  More than 1 survivor. 2nd pass to determine count variability
-    my %std_dev;
-    foreach my $candidate (keys %survivors) {
-        my $mean = _mean(@{$survivors{$candidate}});
-        $std_dev{$candidate} = _std_dev($mean, @{$survivors{$candidate}});
+    if ($lucky) {
+        croak "Bad luck. Couldn't determine the separator of $file_path\n";
+    } else {
+        my %std_dev;
+        foreach my $candidate (keys %survivors) {
+            my $mean = _mean(@{$survivors{$candidate}});
+            $std_dev{$candidate} = _std_dev($mean, @{$survivors{$candidate}});
+        }
+    
+        
+        close $csv;
+    
+        return (sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors);
     }
-    
-    
-    close $csv;
-    
-    return (sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors);
 }
 
 sub _mean {
@@ -130,6 +147,10 @@ __END__
 
 Text::CSV::Separator - Determine the field separator of a CSV file
 
+=head1 VERSION
+
+Version 0.03 April 14, 2006
+
 =head1 SYNOPSIS
 
     use Text::CSV::Separator qw(get_separator);
@@ -154,6 +175,21 @@ Text::CSV::Separator - Determine the field separator of a CSV file
       warning message or any other action
       
     }
+    
+    
+    # "I'm Feeling Lucky" alternative interface
+    
+    use Text::CSV::Separator qw(get_separator);
+    
+    my $separator = get_separator(
+                                    path => $csv_path,
+                                    lucky => 1, 
+                                    exclude => $array1_ref, # optional
+                                    include => $array2_ref, # optional
+                                 );
+  
+    # Don't forget to include the lucky parameter when using this interface
+    
 
 =head1 DESCRIPTION
 
@@ -162,8 +198,8 @@ called field delimiter) of a CSV file, or more generally, of a character
 separated text file (also called delimited text file), and returns it ready
 to use in a CSV parser (e.g., Text::CSV_XS, Tie::CSV_File, or
 Text::CSV::Simple). 
-This may be useful to the vulnerable population of programmers who need to
-process automatically CSV files from different sources.
+This may be useful to the vulnerable -and often ignored- population of
+programmers who need to process automatically CSV files from different sources.
 
 The default set of candidates contains the following characters:
 ',' ';' ':' '|' '\t'
@@ -193,8 +229,8 @@ Most of the other candidates won't appear in a typical CSV line.
 
 =back
 
-The candidates will be removed from the candidates list as soon as they miss
-a line.
+As soon as a candidate misses a line, it will be removed from the candidates
+list.
 
 This is the first test done to the CSV file. In most cases, it will detect the
 separator after processing the first few lines. In particular, if the file
@@ -203,7 +239,7 @@ Processing will stop and return control to the caller as soon as the program
 reaches a status of 1 single candidate (or 0 candidates left).
 
 If the routine cannot determine the separator in the first pass, it will do
-a second pass based on a heuristic technique: even if the other candidates
+a second pass based on a heuristic technique: Even if the other candidates
 appear in every line, their count will likely vary significantly in the
 different lines. So it measures the variability of the remaining candidates and
 returns the list of possible separators sorted by their likelihood, being the
@@ -212,6 +248,15 @@ Since this is a rule of thumb, you can always create a CSV file that breaks
 this logic. Nevertheless, it will work correctly in many cases.
 The possibility of excluding some of the default candidates may help to resolve
 cases with several possible winners.
+
+As an alternative, if you think that the files your program will have to
+deal with aren't too exotic, you can use the B<"I'm Feeling Lucky"> interface.
+This interface has a simpler syntax. To use it you only have to add the
+B<lucky =E<gt> 1> key-value pair to the parameters hash and the routine will return
+a single value, so you can assign it directly to a scalar variable.
+The code skips the 2nd test, which is usually unnecessary, so the program
+will run faster and will require less memory.
+This approach should be enough in most cases.
 
 
 =head1 EXAMPLE
@@ -232,29 +277,38 @@ default candidate not considered, the pipe character):
       $separator = $char_list[0];
     } 
     ...
+    
+    
+    # Using the "I'm Feeling Lucky" interface:
+    
+    my $separator = get_separator(
+                                    path => $csv_path,
+                                    lucky => 1,
+                                    exclude => [':', '|']
+                                  );
 
 
 =head1 MOTIVATION
 
 Despite the popularity of XML, the CSV file format is still widely used
 for data exchange between applications, because of its much lower overhead:
-it requires much less bandwidth and storage space than XML, and it also has
+It requires much less bandwidth and storage space than XML, and it also has
 a better performance under compression.
 
 Unfortunately, there is no formal specification of the CSV format.
 The Microsoft Excel implementation is the most widely used and it has become
-a de facto standard, but the variations are almost endless.
+a I<de facto> standard, but the variations are almost endless.
 
-One of the differences is the field separator character used.
-CSV stands for "comma-separated values", but most of the spreadsheet
+One of the biggest annoyances of this format is the field separator character
+used. CSV stands for "comma-separated values", but most of the spreadsheet
 applications let the user select the field delimiter from a list of several
 different characters when saving or exporting data to a CSV file.
 Furthermore, in a Windows system, when you save a spreadsheet in Excel as a
 CSV file, Excel will use as the field delimiter the default list separator of
 your system's locale, which happens to be a semicolon for several European
 languages. You can even customize this setting and use the list separator you
-like. That's why this particular difference can make it really hard to process
-heterogeneous CSV files automatically.
+like. For these an other reasons, automating the processing of CSV files is a
+risky task.
 
 This module can be used to determine the separator character of a delimited
 text file of any kind, but since the aforementioned ambiguity problems occur

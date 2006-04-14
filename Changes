@@ -1,6 +1,12 @@
 Revision history for Perl extension Text::CSV::Separator.
 
-0.02  April 14 2006
+0.03  April 14 2006
+
+    * Added the I'm Feeling Lucky alternative interface
+    * Updated the documentation
+
+
+0.02  April 13 2006
 
     * Improved the error messages
     * Changed EXPORT to EXPORT_OK
