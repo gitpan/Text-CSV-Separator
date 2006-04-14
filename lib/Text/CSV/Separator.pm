@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Exporter;
 use base 'Exporter';
@@ -149,7 +149,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.03 April 14, 2006
+Version 0.04 April 14, 2006
 
 =head1 SYNOPSIS
 
@@ -307,7 +307,7 @@ Furthermore, in a Windows system, when you save a spreadsheet in Excel as a
 CSV file, Excel will use as the field delimiter the default list separator of
 your system's locale, which happens to be a semicolon for several European
 languages. You can even customize this setting and use the list separator you
-like. For these an other reasons, automating the processing of CSV files is a
+like. For these and other reasons, automating the processing of CSV files is a
 risky task.
 
 This module can be used to determine the separator character of a delimited

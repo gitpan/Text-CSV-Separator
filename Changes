@@ -1,5 +1,10 @@
 Revision history for Perl extension Text::CSV::Separator.
 
+0.04  April 14, 2006
+
+    * Fixed a typo
+    
+
 0.03  April 14 2006
 
     * Added the I'm Feeling Lucky alternative interface
