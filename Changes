@@ -1,5 +1,12 @@
 Revision history for Perl extension Text::CSV::Separator.
 
+0.05  May 2, 2006
+
+    * Added the 'echo' option
+    * Updated the documentation
+    * Added the References section
+
+
 0.04  April 14, 2006
 
     * Fixed a typo

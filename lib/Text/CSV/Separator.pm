@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Exporter;
 use base 'Exporter';
@@ -17,6 +17,13 @@ sub get_separator {
     my %options = @_;
     
     my $file_path = $options{path};
+    
+    # check the options
+    my $echo;
+    if (exists $options{echo} && $options{echo} eq 'on') {
+        $echo = 1;
+        print "\nDetecting field separator of $file_path\n";
+    }
     
     my (@excluded, @included);
     if (exists $options{exclude}) {
@@ -30,8 +37,10 @@ sub get_separator {
     my $lucky;
     if (exists $options{lucky} && $options{lucky} == 1) {
         $lucky = 1;
+        print "Scalar context...\n\n" if $echo;
+    } else {
+        print "Array context...\n\n" if $echo;
     }
-
     
     # Default set of candidates
     my @candidates = (',', ';', ':', '|', "\t");
@@ -42,6 +51,13 @@ sub get_separator {
     if (@excluded > 0) {
         foreach (@excluded) {
             delete $survivors{$_} if (exists $survivors{$_});
+            if ($echo) {
+                if (ord($_) == 9) { # tab character
+                    print "Deleted \\t from candidates list\n";
+                } else {
+                    print "Deleted $_ from candidates list\n";
+                }
+            }
         }
     }
     
@@ -49,6 +65,13 @@ sub get_separator {
         foreach (@included) {
             if (length($_) == 1) {
                 $survivors{$_} = [];
+            }
+            if ($echo) {
+                if (ord($_) == 9) { # tab character
+                    print "Added \\t to candidates list\n";
+                } else {
+                    print "Added $_ to candidates list\n";
+                }
             }
         }
     }
@@ -66,16 +89,31 @@ sub get_separator {
         croak "Couldn't find $file_path.\n";
     }
     
+    my $record_count = 0; # if $echo
     while (<$csv>) {
         my $record = $_;
         chomp $record;
         
+        if ($echo) {
+            $record_count++;
+            print "\nRecord #", $record_count, "\n";
+        }
+        
         foreach my $candidate (keys %survivors) {
+            if ($echo) {
+                if (ord($candidate) == 9) { # tab character
+                    print "Candidate: \\t\t";
+                } else {
+                    print "Candidate: $candidate\t";
+                }
+            }
             
             my $rex = qr/\Q$candidate\E/;
             
             my $count = 0;
             $count++ while ($record =~ /$rex/g);
+            
+            print "Count: $count\n" if $echo;
             
             if ($count > 0 && !$lucky) {
                 push @{$survivors{$candidate}}, $count;
@@ -86,32 +124,63 @@ sub get_separator {
         }
         my @alive = keys %survivors;
         my $survivors_count = @alive;
-        if ($survivors_count == 1 || $survivors_count == 0) {
+        if ($survivors_count == 1) {
+            if ($echo) {
+                if (ord($alive[0]) == 9) {
+                    print "\nSeparator detected: \\t\n";
+                } else {
+                    print "\nSeparator detected: $alive[0]\n";
+                }
+                print "Returning control to caller...\n\n";
+            }
             close $csv;
             if (!$lucky) {
                 return @alive;
-            } elsif ($survivors_count == 1) {
-                return $alive[0];
             } else {
-                croak "No candidates left!\n";
+                return $alive[0];
             }
+        } elsif ($survivors_count == 0) {
+                croak "No candidates left!\n\n";
         }
     }
     
     #  More than 1 survivor. 2nd pass to determine count variability
     if ($lucky) {
-        croak "Bad luck. Couldn't determine the separator of $file_path\n";
+        print "\nSeveral candidates left\n" if $echo;
+        croak "Bad luck. Couldn't determine the separator of $file_path.\n\n";
     } else {
+        print "\nVariability:\n\n" if $echo;
         my %std_dev;
         foreach my $candidate (keys %survivors) {
             my $mean = _mean(@{$survivors{$candidate}});
             $std_dev{$candidate} = _std_dev($mean, @{$survivors{$candidate}});
+            if ($echo) {
+                if (ord($candidate) == 9) {
+                    print "Candidate: \\t\tMean: $mean",
+                } else {
+                    print "Candidate: $candidate\tMean: $mean",
+                }
+                print "\tStd Dev: $std_dev{$candidate}\n\n";
+            }
         }
     
-        
+        print "Couldn't determine the separator\n" if $echo;
+            
         close $csv;
-    
-        return (sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors);
+        
+        my @alive = sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors;
+        if ($echo) {
+            print "Remaining candidates: ";
+            foreach my $left (@alive) {
+                if (ord($left) == 9) {
+                    print " \\t ";
+                } else {
+                    print " $left ";
+                }
+            }
+            print "\n\nReturning control to caller...\n\n";
+        }
+        return @alive;
     }
 }
 
@@ -149,7 +218,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.04 April 14, 2006
+Version 0.05 May 2, 2006
 
 =head1 SYNOPSIS
 
@@ -159,25 +228,27 @@ Version 0.04 April 14, 2006
                                     path => $csv_path,
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
+                                    echo => 'on',           # optional
                                  );
   
     
     my $char_count = @char_list;
     
     my $separator;
-    if ($char_count == 1) {       # successful detection, we've got a winner
+    if ($char_count == 1) {       # successful detection
       $separator = $char_list[0];
       
     } elsif  ($char_count > 1) {  # several candidates passed the tests
       warning message or any other action
       
-    } else {                      # none of the candidates passed the tests
+    } else {                      # no candidate passed the tests
       warning message or any other action
       
     }
     
     
     # "I'm Feeling Lucky" alternative interface
+    # Don't forget to include the 'lucky' parameter
     
     use Text::CSV::Separator qw(get_separator);
     
@@ -186,10 +257,10 @@ Version 0.04 April 14, 2006
                                     lucky => 1, 
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
+                                    echo => 'on',           # optional
                                  );
-  
-    # Don't forget to include the lucky parameter when using this interface
     
+
 
 =head1 DESCRIPTION
 
@@ -202,7 +273,7 @@ This may be useful to the vulnerable -and often ignored- population of
 programmers who need to process automatically CSV files from different sources.
 
 The default set of candidates contains the following characters:
-',' ';' ':' '|' '\t'
+','  ';'  ':'  '|'  '\t'
 
 The only required parameter is the CSV file path. Optionally, the user can
 specify characters to be excluded or included in the list of candidates. 
@@ -251,13 +322,55 @@ cases with several possible winners.
 
 As an alternative, if you think that the files your program will have to
 deal with aren't too exotic, you can use the B<"I'm Feeling Lucky"> interface.
-This interface has a simpler syntax. To use it you only have to add the
-B<lucky =E<gt> 1> key-value pair to the parameters hash and the routine will return
-a single value, so you can assign it directly to a scalar variable.
+This interface has a simpler syntax.
+To use it you only have to add the B<lucky =E<gt> 1> key-value pair to the
+parameters hash and the routine will return a single value, so you can assign
+it directly to a scalar variable.
 The code skips the 2nd test, which is usually unnecessary, so the program
-will run faster and will require less memory.
-This approach should be enough in most cases.
+will run faster and will require less memory. This approach should be enough in
+most cases.
 
+=head1 FUNCTIONS
+
+=over4
+
+=item get_separator(%options)
+
+Returns an array containing the field separator character (or characters, if
+more than one candidate passed the tests) of a CSV file.
+The available parameters are:
+
+=over8
+
+=item path
+
+Required. The path to the CSV file to be analyzed.
+
+=item exclude
+
+Optional. Array containing characters to be excluded from the candidates list.
+
+=item include
+
+Optional. Array containing characters to be included in the candidates list.
+
+=item lucky
+
+Optional. Activates the scalar context of the function. It will return
+one single character. Off by default.
+
+=item echo
+
+Optional. Writes to the standard output messages describing the actions
+performed. Off by default.
+This is useful to keep track of what's going on, especially for debugging
+purposes.
+
+=back
+
+=head1 EXPORT
+
+None by default.
 
 =head1 EXAMPLE
 
@@ -267,8 +380,11 @@ You also know that one of the fields contains time values. This field will
 provide a fixed number of colons that could mislead the detection code.
 In this case, you should exclude the colon (and you can also exclude the other
 default candidate not considered, the pipe character):
-  
-    my @char_list = get_separator(path => $csv_path, exclude => [':', '|']);
+
+    my @char_list = get_separator(
+                                    path => $csv_path,
+                                    exclude => [':', '|'],
+                                 );
   
     my $char_count = @char_list;
     
@@ -284,23 +400,25 @@ default candidate not considered, the pipe character):
     my $separator = get_separator(
                                     path => $csv_path,
                                     lucky => 1,
-                                    exclude => [':', '|']
+                                    exclude => [':', '|'],
                                   );
-
+    
+    
 
 =head1 MOTIVATION
 
 Despite the popularity of XML, the CSV file format is still widely used
 for data exchange between applications, because of its much lower overhead:
 It requires much less bandwidth and storage space than XML, and it also has
-a better performance under compression.
+a better performance under compression (see the References below).
 
 Unfortunately, there is no formal specification of the CSV format.
 The Microsoft Excel implementation is the most widely used and it has become
 a I<de facto> standard, but the variations are almost endless.
 
-One of the biggest annoyances of this format is the field separator character
-used. CSV stands for "comma-separated values", but most of the spreadsheet
+One of the biggest annoyances of this format is that in most cases you don't
+know a priori what is the field separator character used in a file.
+CSV stands for "comma-separated values", but most of the spreadsheet
 applications let the user select the field delimiter from a list of several
 different characters when saving or exporting data to a CSV file.
 Furthermore, in a Windows system, when you save a spreadsheet in Excel as a
@@ -314,26 +432,24 @@ This module can be used to determine the separator character of a delimited
 text file of any kind, but since the aforementioned ambiguity problems occur
 mainly in CSV files, I decided to use the Text::CSV:: namespace.
 
-=head2 EXPORT
+=head1 REFERENCES
 
-=over
+L<http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm>
 
-=item None by default.
-
-=back
+L<http://www.xml.com/pub/a/2004/12/15/deviant.html>
 
 =head1 SEE ALSO
 
 There's another module in CPAN for this task, Text::CSV::DetectSeparator,
 which follows a different approach.
 
-=head1 AUTHOR
-
-Enrique Nell, E<lt>enell@cpan.orgE<gt>
-
 =head1 ACKNOWLEDGEMENTS
 
 Many thanks to Xavier Noria for wise suggestions.
+
+=head1 AUTHOR
+
+Enrique Nell, E<lt>enell@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
