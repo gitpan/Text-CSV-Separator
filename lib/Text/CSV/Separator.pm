@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Exporter;
 use base 'Exporter';
@@ -218,7 +218,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.05 May 2, 2006
+Version 0.06 May 2, 2006
 
 =head1 SYNOPSIS
 
@@ -332,7 +332,7 @@ most cases.
 
 =head1 FUNCTIONS
 
-=over4
+=over 4
 
 =item get_separator(%options)
 
@@ -340,7 +340,7 @@ Returns an array containing the field separator character (or characters, if
 more than one candidate passed the tests) of a CSV file.
 The available parameters are:
 
-=over8
+=over 8
 
 =item path
 
