@@ -1,9 +1,12 @@
 Revision history for Perl extension Text::CSV::Separator.
 
+0.07  May 14, 2006
+
+    * Code cleanup
+
 0.06  May 2, 2006
 
     * Fixed an indentation bug in the documentation
-
 
 0.05  May 2, 2006
 
@@ -11,24 +14,20 @@ Revision history for Perl extension Text::CSV::Separator.
     * Updated the documentation
     * Added the References section
 
-
 0.04  April 14, 2006
 
     * Fixed a typo
-    
 
 0.03  April 14 2006
 
     * Added the I'm Feeling Lucky alternative interface
     * Updated the documentation
 
-
 0.02  April 13 2006
 
     * Improved the error messages
     * Changed EXPORT to EXPORT_OK
     * Improved the documentation
-    
 
 0.01  March 27 2006
 

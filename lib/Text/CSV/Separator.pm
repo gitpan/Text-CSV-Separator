@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Exporter;
 use base 'Exporter';
@@ -51,13 +51,7 @@ sub get_separator {
     if (@excluded > 0) {
         foreach (@excluded) {
             delete $survivors{$_} if (exists $survivors{$_});
-            if ($echo) {
-                if (ord($_) == 9) { # tab character
-                    print "Deleted \\t from candidates list\n";
-                } else {
-                    print "Deleted $_ from candidates list\n";
-                }
-            }
+            _message('deleted', $_) if ($echo); 
         }
     }
     
@@ -66,13 +60,7 @@ sub get_separator {
             if (length($_) == 1) {
                 $survivors{$_} = [];
             }
-            if ($echo) {
-                if (ord($_) == 9) { # tab character
-                    print "Added \\t to candidates list\n";
-                } else {
-                    print "Added $_ to candidates list\n";
-                }
-            }
+            _message('added', $_) if ($echo);
         }
     }
     
@@ -100,13 +88,7 @@ sub get_separator {
         }
         
         foreach my $candidate (keys %survivors) {
-            if ($echo) {
-                if (ord($candidate) == 9) { # tab character
-                    print "Candidate: \\t\t";
-                } else {
-                    print "Candidate: $candidate\t";
-                }
-            }
+            _message('candidate', $candidate) if ($echo);
             
             my $rex = qr/\Q$candidate\E/;
             
@@ -126,11 +108,7 @@ sub get_separator {
         my $survivors_count = @alive;
         if ($survivors_count == 1) {
             if ($echo) {
-                if (ord($alive[0]) == 9) {
-                    print "\nSeparator detected: \\t\n";
-                } else {
-                    print "\nSeparator detected: $alive[0]\n";
-                }
+                _message('detected', $alive[0]);
                 print "Returning control to caller...\n\n";
             }
             close $csv;
@@ -155,12 +133,8 @@ sub get_separator {
             my $mean = _mean(@{$survivors{$candidate}});
             $std_dev{$candidate} = _std_dev($mean, @{$survivors{$candidate}});
             if ($echo) {
-                if (ord($candidate) == 9) {
-                    print "Candidate: \\t\tMean: $mean",
-                } else {
-                    print "Candidate: $candidate\tMean: $mean",
-                }
-                print "\tStd Dev: $std_dev{$candidate}\n\n";
+                _message('candidate', $candidate);
+                print "Mean: $mean\tStd Dev: $std_dev{$candidate}\n\n";
             }
         }
     
@@ -172,11 +146,7 @@ sub get_separator {
         if ($echo) {
             print "Remaining candidates: ";
             foreach my $left (@alive) {
-                if (ord($left) == 9) {
-                    print " \\t ";
-                } else {
-                    print " $left ";
-                }
+                _message('left', $left);
             }
             print "\n\nReturning control to caller...\n\n";
         }
@@ -206,9 +176,29 @@ sub _std_dev {
     return $std_dev;      
 }
 
-
+sub _message {
+    my ($type, $candidate) = @_;
+    
+    my $char;
+    if (ord $candidate == 9) { # tab character
+        $char = "\\t";
+    } else {
+        $char = $candidate;
+    }
+    
+    my %message = (
+                   deleted => "Deleted $char from candidates list\n",
+                   added => "Added $char to candidates list\n",
+                   candidate => "Candidate: $char\t",
+                   detected => "\nSeparator detected: $char\n",
+                   left => " $char ",
+                  );
+    
+    print $message{$type};
+}
 
 1;
+
 __END__
 
 
@@ -218,7 +208,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.06 May 2, 2006
+Version 0.07 May 14, 2006
 
 =head1 SYNOPSIS
 
