@@ -3,5 +3,7 @@ Makefile.PL
 MANIFEST
 README
 t/00_load.t
+t/01_pod_valid.t
+t/02_pod_coverage.t
 lib/Text/CSV/Separator.pm
 META.yml                                 Module meta-data (added by MakeMaker)
