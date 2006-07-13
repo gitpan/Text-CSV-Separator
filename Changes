@@ -1,5 +1,9 @@
 Revision history for Perl extension Text::CSV::Separator.
 
+0.09  July 13, 2006
+
+    * Fixed a POD bug
+
 0.08  July 13, 2006
 
     * Added a couple of POD tests
