@@ -1,4 +1,4 @@
-Text-CSV-Separator version 0.09
+Text-CSV-Separator version 0.10
 ===============================
 
 Description
@@ -20,10 +20,7 @@ To install this module type the following:
    make test
    make install
 
-
-Usage
------
-Check the documentation (type perldoc Text::CSV::Separator)
+In Windows systems, use nmake or dmake instead.
 
 
 Copyright and license

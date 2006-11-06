@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(croak);
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Exporter;
 use base 'Exporter';
@@ -208,7 +208,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.09 July 13, 2006
+Version 0.10 November 6, 2006
 
 =head1 SYNOPSIS
 
@@ -441,7 +441,7 @@ Many thanks to Xavier Noria for wise suggestions.
 
 =head1 AUTHOR
 
-Enrique Nell, E<lt>enell@cpan.orgE<gt>
+Enrique Nell, E<lt>perl_nell@telefonica.netE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

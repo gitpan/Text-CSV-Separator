@@ -1,6 +1,9 @@
 #!/usr/bin/perl
-use Test::Pod::Coverage;
+use Test::More;
 
-all_pod_coverage_ok;
+eval 'use Test::Pod::Coverage 1.04';
+plan (
+	skip_all => 'Test::Pod::Coverage 1.04 required for testing POD coverage'
+) if $@;
 
-__END__
+all_pod_coverage_ok ();
