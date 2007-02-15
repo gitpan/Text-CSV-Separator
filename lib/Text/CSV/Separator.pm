@@ -3,9 +3,9 @@ package Text::CSV::Separator;
 use 5.008;
 use strict;
 use warnings;
-use Carp qw(croak);
+use Carp qw(carp croak);
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Exporter;
 use base 'Exporter';
@@ -42,6 +42,54 @@ sub get_separator {
         print "Array context...\n\n" if $echo;
     }
     
+    my $colon_in_timecol = 1;
+    my $comma_as_decsep = 1;
+    my $comma_as_groupsep = 1;
+    
+    my $time_regex = qr/
+                        (?:^|(?<=\s|[T,;|\t]))
+                        (?:[01]?[0-9]|2[0-3])   # hours
+                        :
+                        (?:[0-5][0-9])          # minutes  
+                        (?::[0-5][0-9])?        # seconds
+                        (?:
+                            Z
+                            |
+                            \.\d+
+                            |
+                            (?:\+|-)
+                            (?:[01]?[0-9]|2[0-3])
+                            :
+                            (?:[0-5][0-9])
+                        )?
+                        (?=$|\s|[,;|\t])
+                       /x;
+    
+    my $comma_decsep_number = qr/
+                                    (?:^|(?<=[^\d,.]))
+                                    (?:
+                                        [-+]?
+                                        (?:
+                                        	\d{0,3}?(?:\.\d{3})*
+                                        	|
+                                        	\d+
+                                        )
+                                        ,\d+
+                                    )
+                                    (?=$|[^\d,.])
+                                /x;
+    
+    my $comma_groupsep_number = qr/
+                                    (?:^|(?<=[^\d,.]))
+                                    (?:
+                                        [-+]?\d{0,3}?
+                                        (?:,\d{3})+
+                                        (?:\.\d+)?
+                                    )
+                                    (?=$|[^\d,.])
+                                  /x;
+    
+    
     # Default set of candidates
     my @candidates = (',', ';', ':', '|', "\t");
     
@@ -65,7 +113,8 @@ sub get_separator {
     }
     
     if (scalar(keys %survivors) == 0) {
-        croak "No candidates left!";
+        carp "No candidates left!";
+        return;
     }
     
     
@@ -104,6 +153,20 @@ sub get_separator {
             }
             
         }
+        
+        if (!$lucky && $colon_in_timecol && ($record !~ /$time_regex/)) {
+            $colon_in_timecol = 0;
+        }
+            
+        if (!$lucky && $comma_as_decsep && ($record !~ /$comma_decsep_number/)) {
+            $comma_as_decsep = 0;
+        }
+        
+        if (!$lucky && $comma_as_groupsep && ($record !~ /$comma_groupsep_number/)) {
+            $comma_as_groupsep = 0;
+        }
+        
+        
         my @alive = keys %survivors;
         my $survivors_count = @alive;
         if ($survivors_count == 1) {
@@ -118,14 +181,16 @@ sub get_separator {
                 return $alive[0];
             }
         } elsif ($survivors_count == 0) {
-                croak "No candidates left!\n\n";
+                carp "\nNo candidates left!\n";
+                return;
         }
     }
     
     #  More than 1 survivor. 2nd pass to determine count variability
     if ($lucky) {
         print "\nSeveral candidates left\n" if $echo;
-        croak "Bad luck. Couldn't determine the separator of $file_path.\n\n";
+        carp "\nBad luck. Couldn't determine the separator of $file_path.\n";
+        return;
     } else {
         print "\nVariability:\n\n" if $echo;
         my %std_dev;
@@ -142,7 +207,26 @@ sub get_separator {
             
         close $csv;
         
+        my @penalized;
+        if ($colon_in_timecol) {
+            print "Detected time column\n" if $echo;
+            delete $survivors{':'};
+            push @penalized, ':';
+        }
+        
+        if ($comma_as_decsep || $comma_as_groupsep) {
+            delete $survivors{','};
+            push @penalized, ',';
+            if ($echo && $comma_as_decsep) {
+                print "\nDetected comma-separated decimal numbers column\n";
+            }
+            if ($echo && $comma_as_groupsep) {
+                print "\nDetected comma-grouped numbers column\n";
+            }
+        }
+        
         my @alive = sort {$std_dev{$a} <=> $std_dev{$b}} keys %survivors;
+        push @alive, sort {$std_dev{$a} <=> $std_dev{$b}} @penalized;
         if ($echo) {
             print "Remaining candidates: ";
             foreach my $left (@alive) {
@@ -208,7 +292,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.10 November 6, 2006
+Version 0.11 February 15, 2007
 
 =head1 SYNOPSIS
 
@@ -221,26 +305,21 @@ Version 0.10 November 6, 2006
                                     echo => 'on',           # optional
                                  );
   
-    
-    my $char_count = @char_list;
-    
-    my $separator;
-    if ($char_count == 1) {       # successful detection
-      $separator = $char_list[0];
+    if (@char_list) {
+        my $separator;
+        if (@char_list == 1) {    # successful detection
+          $separator = $char_list[0];
       
-    } elsif  ($char_count > 1) {  # several candidates passed the tests
-      warning message or any other action
+        } else {                   # several candidates passed the tests
+          warning message or any other action
       
-    } else {                      # no candidate passed the tests
-      warning message or any other action
-      
+    } else {                       # no candidate passed the tests
+          warning message or any other action
     }
     
     
     # "I'm Feeling Lucky" alternative interface
     # Don't forget to include the 'lucky' parameter
-    
-    use Text::CSV::Separator qw(get_separator);
     
     my $separator = get_separator(
                                     path => $csv_path,
@@ -270,8 +349,8 @@ specify characters to be excluded or included in the list of candidates.
 
 The routine returns an array containing the list of candidates that passed
 the tests. If it succeeds, this array will contain only one value: the field
-separator we are looking for.
-
+separator we are looking for. On the other hand, if no candidate survives
+the tests, it will return an empty list.
 
 The technique used is based on the following principle:
 
@@ -281,7 +360,7 @@ The technique used is based on the following principle:
 
 For every line in the file, the number of instances of the separator
 character acting as separators must be an integer constant > 0 , although
-a line may also contain some instances of that character as escaped
+a line may also contain some instances of that character as
 literal characters.
 
 =item *
@@ -300,23 +379,25 @@ Processing will stop and return control to the caller as soon as the program
 reaches a status of 1 single candidate (or 0 candidates left).
 
 If the routine cannot determine the separator in the first pass, it will do
-a second pass based on a heuristic technique: Even if the other candidates
-appear in every line, their count will likely vary significantly in the
-different lines. So it measures the variability of the remaining candidates and
-returns the list of possible separators sorted by their likelihood, being the
-first array item the most probable separator.
-Since this is a rule of thumb, you can always create a CSV file that breaks
-this logic. Nevertheless, it will work correctly in many cases.
-The possibility of excluding some of the default candidates may help to resolve
-cases with several possible winners.
+a second pass based on several heuristic techniques. It checks whether the
+file has columns consisting of time values, comma-separated decimal numbers,
+or numbers containing a comma as the group separator, which can lead to false
+positives in files that don't have a header row. It also measures the
+variability of the remaining candidates.
+Of course, you can always create a CSV file capable of resisting the siege,
+but this approach will work correctly in many cases. The possibility of
+excluding some of the default candidates may help to resolve cases with
+several possible winners.
+The resulting array contains the list of possible separators sorted by their
+likelihood, being the first array item the most probable separator.
 
-As an alternative, if you think that the files your program will have to
-deal with aren't too exotic, you can use the B<"I'm Feeling Lucky"> interface.
-This interface has a simpler syntax.
-To use it you only have to add the B<lucky =E<gt> 1> key-value pair to the
-parameters hash and the routine will return a single value, so you can assign
-it directly to a scalar variable.
-The code skips the 2nd test, which is usually unnecessary, so the program
+The module also provides an alternative interface with a simpler syntax,
+which can be handy if you think that the files your program will have
+to deal with aren't too exotic. To use it you only have to add the
+B<lucky =E<gt> 1> key-value pair to the parameters hash and the routine
+will return a single value, so you can assign it directly to a scalar variable.
+If no candidate survives the first pass, it will return C<undef>.
+The code skips the 2nd pass, which is usually unnecessary, so the program
 will run faster and will require less memory. This approach should be enough in
 most cases.
 
@@ -327,7 +408,9 @@ most cases.
 =item get_separator(%options)
 
 Returns an array containing the field separator character (or characters, if
-more than one candidate passed the tests) of a CSV file.
+more than one candidate passed the tests) of a CSV file. In case no candidate
+passes the tests, it returns an empty list.
+
 The available parameters are:
 
 =over 8
@@ -378,13 +461,15 @@ default candidate not considered, the pipe character):
                                     exclude => [':', '|'],
                                  );
   
-    my $char_count = @char_list;
     
-    my $separator;
-    if ($char_count == 1) {       
-      $separator = $char_list[0];
-    } 
+    
+    if (@char_list) {
+        my $separator;
+        if (@char_list == 1) {       
+          $separator = $char_list[0];
+        } 
     ...
+    }
     
     
     # Using the "I'm Feeling Lucky" interface:
@@ -438,6 +523,8 @@ which follows a different approach.
 =head1 ACKNOWLEDGEMENTS
 
 Many thanks to Xavier Noria for wise suggestions.
+The author is also grateful to Thomas Zahreddin, Benjamin Erhart and
+Ferdinand Gassauer for valuable comments.
 
 =head1 AUTHOR
 

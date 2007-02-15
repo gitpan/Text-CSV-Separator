@@ -1,4 +1,18 @@
-Revision history for Perl extension Text::CSV::Separator.
+Revision history for Perl extension Text::CSV::Separator
+
+0.11  February 15, 2006
+
+    * Included new heuristics to reinforce the 2nd pass.
+      Now the function tries to detect regularities which can lead to false
+      positives in headerless files, like columns containing time values,
+      comma-separated decimal numbers and numbers containing the comma as the
+      group character (the last two cases are usual in some locales, like
+      German or Spanish).
+    * Changed several croaks to carps. If no candidate passes the tests,
+      get_separator returns undef in scalar context and an empty list in
+      array context.
+    * Updated (and improved) the documentation.
+    * Added more tests.
 
 0.10  November 6, 2006
      
