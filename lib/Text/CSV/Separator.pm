@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use Exporter;
 use base 'Exporter';
@@ -18,7 +18,7 @@ sub get_separator {
     
     my $file_path = $options{path};
     
-    # check the options
+    # check options
     my $echo;
     if (exists $options{echo} && $options{echo} eq 'on') {
         $echo = 1;
@@ -42,11 +42,17 @@ sub get_separator {
         print "Array context...\n\n" if $echo;
     }
     
-    my $colon_in_timecol = 1;
-    my $comma_as_decsep = 1;
-    my $comma_as_groupsep = 1;
+    # options checked
     
-    my $time_regex = qr/
+    # variables and regexes to detect column regularities
+    my ($colon_timecol, $comma_decsep, $comma_groupsep);
+    my ($time_rx, $commadecsep_rx, $commagroupsep_rx);
+    if (!$lucky) {
+        $colon_timecol = 1;
+        $comma_decsep = 1;
+        $comma_groupsep = 1;
+        
+        $time_rx = qr/
                         (?:^|(?<=\s|[T,;|\t]))
                         (?:[01]?[0-9]|2[0-3])   # hours
                         :
@@ -63,32 +69,32 @@ sub get_separator {
                             (?:[0-5][0-9])
                         )?
                         (?=$|\s|[,;|\t])
-                       /x;
+                    /x;
     
-    my $comma_decsep_number = qr/
-                                    (?:^|(?<=[^\d,.]))
-                                    (?:
-                                        [-+]?
-                                        (?:
-                                        	\d{0,3}?(?:\.\d{3})*
-                                        	|
-                                        	\d+
-                                        )
-                                        ,\d+
-                                    )
-                                    (?=$|[^\d,.])
-                                /x;
+        $commadecsep_rx = qr/
+                            (?:^|(?<=[^\d,.]))
+                            (?:
+                                [-+]?
+                                (?:
+                                    \d{0,3}?(?:\.\d{3})*
+                                    |
+                                    \d+
+                                )
+                                ,\d+
+                            )
+                            (?=$|[^\d,.])
+                            /x;
     
-    my $comma_groupsep_number = qr/
-                                    (?:^|(?<=[^\d,.]))
-                                    (?:
-                                        [-+]?\d{0,3}?
-                                        (?:,\d{3})+
-                                        (?:\.\d+)?
-                                    )
-                                    (?=$|[^\d,.])
-                                  /x;
-    
+        $commagroupsep_rx = qr/
+                                (?:^|(?<=[^\d,.]))
+                                (?:
+                                    [-+]?\d{0,3}?
+                                    (?:,\d{3})+
+                                    (?:\.\d+)?
+                                )
+                                (?=$|[^\d,.])
+                             /x;
+    }
     
     # Default set of candidates
     my @candidates = (',', ';', ':', '|', "\t");
@@ -154,16 +160,18 @@ sub get_separator {
             
         }
         
-        if (!$lucky && $colon_in_timecol && ($record !~ /$time_regex/)) {
-            $colon_in_timecol = 0;
-        }
+        if (!$lucky) {
+            if ($colon_timecol && ($record !~ /$time_rx/)) {
+                $colon_timecol = 0;
+            }
             
-        if (!$lucky && $comma_as_decsep && ($record !~ /$comma_decsep_number/)) {
-            $comma_as_decsep = 0;
-        }
+            if ($comma_decsep && ($record !~ /$commadecsep_rx/)) {
+                $comma_decsep = 0;
+            }
         
-        if (!$lucky && $comma_as_groupsep && ($record !~ /$comma_groupsep_number/)) {
-            $comma_as_groupsep = 0;
+            if ($comma_groupsep && ($record !~ /$commagroupsep_rx/)) {
+                $comma_groupsep = 0;
+            }
         }
         
         
@@ -208,19 +216,19 @@ sub get_separator {
         close $csv;
         
         my @penalized;
-        if ($colon_in_timecol) {
+        if ($colon_timecol) {
             print "Detected time column\n" if $echo;
             delete $survivors{':'};
             push @penalized, ':';
         }
         
-        if ($comma_as_decsep || $comma_as_groupsep) {
+        if ($comma_decsep || $comma_groupsep) {
             delete $survivors{','};
             push @penalized, ',';
-            if ($echo && $comma_as_decsep) {
+            if ($echo && $comma_decsep) {
                 print "\nDetected comma-separated decimal numbers column\n";
             }
-            if ($echo && $comma_as_groupsep) {
+            if ($echo && $comma_groupsep) {
                 print "\nDetected comma-grouped numbers column\n";
             }
         }
@@ -292,7 +300,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.11 February 15, 2007
+Version 0.12 February 16, 2007
 
 =head1 SYNOPSIS
 

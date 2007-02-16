@@ -1,5 +1,9 @@
 Revision history for Perl extension Text::CSV::Separator
 
+0.12  February 16, 2006
+
+    * Some code improvements.
+
 0.11  February 15, 2006
 
     * Included new heuristics to reinforce the 2nd pass.
