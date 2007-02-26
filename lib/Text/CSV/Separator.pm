@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use Exporter;
 use base 'Exporter';
@@ -34,67 +34,16 @@ sub get_separator {
         @included = @{$options{include}};
     }
     
-    my $lucky;
+    my ($lucky, $colon_timecol, $comma_decsep, $comma_groupsep);
     if (exists $options{lucky} && $options{lucky} == 1) {
         $lucky = 1;
         print "Scalar context...\n\n" if $echo;
     } else {
-        print "Array context...\n\n" if $echo;
+        $colon_timecol = $comma_decsep = $comma_groupsep = 1;
+        print "List context...\n\n" if $echo;
     }
     
     # options checked
-    
-    # variables and regexes to detect column regularities
-    my ($colon_timecol, $comma_decsep, $comma_groupsep);
-    my ($time_rx, $commadecsep_rx, $commagroupsep_rx);
-    if (!$lucky) {
-        $colon_timecol = 1;
-        $comma_decsep = 1;
-        $comma_groupsep = 1;
-        
-        $time_rx = qr/
-                        (?:^|(?<=\s|[T,;|\t]))
-                        (?:[01]?[0-9]|2[0-3])   # hours
-                        :
-                        (?:[0-5][0-9])          # minutes  
-                        (?::[0-5][0-9])?        # seconds
-                        (?:
-                            Z
-                            |
-                            \.\d+
-                            |
-                            (?:\+|-)
-                            (?:[01]?[0-9]|2[0-3])
-                            :
-                            (?:[0-5][0-9])
-                        )?
-                        (?=$|\s|[,;|\t])
-                    /x;
-    
-        $commadecsep_rx = qr/
-                            (?:^|(?<=[^\d,.]))
-                            (?:
-                                [-+]?
-                                (?:
-                                    \d{0,3}?(?:\.\d{3})*
-                                    |
-                                    \d+
-                                )
-                                ,\d+
-                            )
-                            (?=$|[^\d,.])
-                            /x;
-    
-        $commagroupsep_rx = qr/
-                                (?:^|(?<=[^\d,.]))
-                                (?:
-                                    [-+]?\d{0,3}?
-                                    (?:,\d{3})+
-                                    (?:\.\d+)?
-                                )
-                                (?=$|[^\d,.])
-                             /x;
-    }
     
     # Default set of candidates
     my @candidates = (',', ';', ':', '|', "\t");
@@ -104,8 +53,8 @@ sub get_separator {
     
     if (@excluded > 0) {
         foreach (@excluded) {
-            delete $survivors{$_} if (exists $survivors{$_});
-            _message('deleted', $_) if ($echo); 
+            delete $survivors{$_};
+            _message('deleted', $_) if $echo; 
         }
     }
     
@@ -114,23 +63,17 @@ sub get_separator {
             if (length($_) == 1) {
                 $survivors{$_} = [];
             }
-            _message('added', $_) if ($echo);
+            _message('added', $_) if $echo;
         }
     }
     
-    if (scalar(keys %survivors) == 0) {
+    if (keys %survivors == 0) {
         carp "No candidates left!";
         return;
     }
     
-    
     my $csv;
-    if (-e $file_path) {
-        open ($csv, "<:crlf", $file_path) ||
-        croak "Couldn't open $file_path: $!";
-    } else {
-        croak "Couldn't find $file_path.\n";
-    }
+    open ($csv, "<:crlf", $file_path) || croak "Couldn't open $file_path: $!";
     
     my $record_count = 0; # if $echo
     while (<$csv>) {
@@ -139,11 +82,11 @@ sub get_separator {
         
         if ($echo) {
             $record_count++;
-            print "\nRecord #", $record_count, "\n";
+            print "\nRecord #$record_count\n";
         }
         
         foreach my $candidate (keys %survivors) {
-            _message('candidate', $candidate) if ($echo);
+            _message('candidate', $candidate) if $echo;
             
             my $rex = qr/\Q$candidate\E/;
             
@@ -161,17 +104,9 @@ sub get_separator {
         }
         
         if (!$lucky) {
-            if ($colon_timecol && ($record !~ /$time_rx/)) {
-                $colon_timecol = 0;
-            }
-            
-            if ($comma_decsep && ($record !~ /$commadecsep_rx/)) {
-                $comma_decsep = 0;
-            }
-        
-            if ($comma_groupsep && ($record !~ /$commagroupsep_rx/)) {
-                $comma_groupsep = 0;
-            }
+            $colon_timecol = _regularity($record, 'timecol') if $colon_timecol;
+            $comma_decsep = _regularity($record, 'decsep') if $comma_decsep;
+            $comma_groupsep = _regularity($record, 'groupsep') if $comma_groupsep;
         }
         
         
@@ -265,7 +200,61 @@ sub _std_dev {
     
     my $std_dev = sqrt($sum / (scalar(@array) - 1));
     
-    return $std_dev;      
+    return $std_dev;
+}
+
+sub _regularity {
+    my ($string, $kind) = @_;
+    
+    my $time_rx = qr/
+                        (?:^|(?<=\s|[T,;|\t]))
+                        (?:[01]?[0-9]|2[0-3])   # hours
+                        :
+                        (?:[0-5][0-9])          # minutes  
+                        (?::[0-5][0-9])?        # seconds
+                        (?:
+                            Z
+                            |
+                            \.\d+
+                            |
+                            (?:\+|-)
+                            (?:[01]?[0-9]|2[0-3])
+                            :
+                            (?:[0-5][0-9])
+                        )?
+                        (?=$|\s|[,;|\t])
+                    /x;
+    
+    my $commadecsep_rx = qr/
+                                (?:^|(?<=[^\d,.]))
+                                (?:
+                                    [-+]?
+                                    (?:
+                                        \d{0,3}?(?:\.\d{3})*
+                                        |
+                                        \d+
+                                    )
+                                    ,\d+
+                                )
+                                (?=$|[^\d,.])
+                            /x;
+    
+    my $commagroupsep_rx = qr/
+                                (?:^|(?<=[^\d,.]))
+                                (?:
+                                    [-+]?\d{0,3}?
+                                    (?:,\d{3})+
+                                    (?:\.\d+)?
+                                )
+                                (?=$|[^\d,.])
+                             /x;
+                             
+    
+    return 0 if ($kind eq 'timecol' && $string !~ /$time_rx/);
+    return 0 if ($kind eq 'decsep' && $string !~ /$commadecsep_rx/);
+    return 0 if ($kind eq 'groupsep' && $string !~ /$commagroupsep_rx/);
+    
+    return 1;
 }
 
 sub _message {
@@ -300,7 +289,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.12 February 16, 2007
+Version 0.13 February 26, 2007
 
 =head1 SYNOPSIS
 
@@ -315,7 +304,7 @@ Version 0.12 February 16, 2007
   
     if (@char_list) {
         my $separator;
-        if (@char_list == 1) {    # successful detection
+        if (@char_list == 1) {     # successful detection
           $separator = $char_list[0];
       
         } else {                   # several candidates passed the tests
@@ -406,7 +395,8 @@ B<lucky =E<gt> 1> key-value pair to the parameters hash and the routine
 will return a single value, so you can assign it directly to a scalar variable.
 If no candidate survives the first pass, it will return C<undef>.
 The code skips the 2nd pass, which is usually unnecessary, so the program
-will run faster and will require less memory. This approach should be enough in
+won't store counts and won't check any existing regularities. Hence, it will
+run faster and will require less memory. This approach should be enough in
 most cases.
 
 =head1 FUNCTIONS
@@ -425,7 +415,7 @@ The available parameters are:
 
 =item path
 
-Required. The path to the CSV file to be analyzed.
+Required. The path to the CSV file.
 
 =item exclude
 
@@ -437,8 +427,8 @@ Optional. Array containing characters to be included in the candidates list.
 
 =item lucky
 
-Optional. Activates the scalar context of the function. It will return
-one single character. Off by default.
+Optional. If selected, get_separator will return one single character,
+or C<undef> in case no separator is detected. Off by default.
 
 =item echo
 

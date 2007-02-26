@@ -2,13 +2,11 @@
 use strict;
 use warnings;
 
-use Test::More tests => 19;
+use Test::More tests => 17;
 use FindBin();
 
-my @subs = qw( get_separator );
+use Text::CSV::Separator qw(get_separator);
 
-use_ok( 'Text::CSV::Separator', @subs);
-can_ok( __PACKAGE__, 'get_separator' );
 
 my @separators;
 
@@ -22,9 +20,9 @@ is( @separators, 1, 'There must be only 1 candidate left');
 
 # testing the return value when there are no candidates left
 @separators = get_separator(
-							path => $sample1_path,
-							exclude => [',', ':'],
-							);
+                            path => $sample1_path,
+                            exclude => [',', ':'],
+                           );
 
 is(@separators, 0, 'There must be no candidates left');
 
@@ -33,24 +31,24 @@ is(@separators, 0, 'There must be no candidates left');
 my $sample2_path = $FindBin::Bin . '/tabsep.csv';
 
 @separators = get_separator( path => $sample2_path );
-								
+
 is( $separators[0], "\t", 'The separator should be a tab');
 is( @separators, 1, 'There must be only 1 candidate left');
 
-			
+
 #-------------------------------------------------------------------------------
 my $sample3_path = $FindBin::Bin . '/commacolonpipe.csv';
 
 @separators = get_separator( path => $sample3_path );
-								
+
 is( $separators[0], ":", 'The most likely candidate should be a colon');
 ok( @separators > 1, 'There must be more than 1 candidate left');
 
 # testing the exclude functionality
 @separators = get_separator(
-							path => $sample3_path,
-							exclude => [',', ':'],
-						   );
+                            path => $sample3_path,
+                            exclude => [',', ':'],
+                           );
 
 is( $separators[0], "|", 'The separator should be a pipe');
 is( @separators, 1, 'There must be only 1 candidate left');
@@ -66,10 +64,10 @@ is( @separators,  2, 'There must be 2 candidates left');
 
 # testing the include/exclude functionality
 @separators = get_separator(
-							path => $sample4_path,
-							include => ['@'],
-							exclude => [',', ':'],
-							);
+                            path => $sample4_path,
+                            include => ['@'],
+                            exclude => [',', ':'],
+                           );
 
 is( $separators[0], "@", 'The separator should be an at sign');
 is( @separators,  1, 'There must be 1 candidate left');
