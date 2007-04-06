@@ -2,6 +2,9 @@ Changes
 Makefile.PL
 MANIFEST
 README
+examples/separator.pl
+examples/separator_lucky.pl
+lib/Text/CSV/Separator.pm
 t/00_load.t
 t/01_pod_valid.t
 t/02_pod_coverage.t
@@ -13,5 +16,4 @@ t/commasep.csv
 t/semicolon_commasep.csv
 t/tabsep.csv
 t/tabsep_timecol.csv
-lib/Text/CSV/Separator.pm
 META.yml                                 Module meta-data (added by MakeMaker)
