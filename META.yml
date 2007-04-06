@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Text-CSV-Separator
-version:             0.14
+version:             0.15
 abstract:            Determine the field separator of a CSV file
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32

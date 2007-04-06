@@ -2,7 +2,6 @@
 use strict;
 use Text::CSV_XS;
 use Text::CSV::Separator qw(get_separator);
-use Carp qw(carp croak);
 
 $|++;
 
@@ -10,7 +9,7 @@ my $csv_path;
 if ($ARGV[0]) {
     $csv_path = $ARGV[0];
 } else {
-    croak "Usage: perl separator_lucky.pl <file_path>\n";
+    die "Usage: perl separator_lucky.pl <file_path>\n";
 }
 
 my $separator = get_separator( path => $csv_path, lucky => 1 );
