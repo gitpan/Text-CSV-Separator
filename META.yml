@@ -1,13 +1,13 @@
 --- #YAML:1.0
 name:                Text-CSV-Separator
-version:             0.15
+version:             0.16
 abstract:            Determine the field separator of a CSV file
-license:             ~
-generated_by:        ExtUtils::MakeMaker version 6.32
+license:             perl
+generated_by:        ExtUtils::MakeMaker version 6.36
 distribution_type:   module
 requires:     
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.2.html
     version: 1.2
 author:
-    - Enrique Nell <enell@cpan.org>
+    - Enrique Nell <perl_nell@telefonica.net>

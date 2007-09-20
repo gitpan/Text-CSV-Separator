@@ -1,23 +1,28 @@
 Revision history for Perl extension Text::CSV::Separator
 
+0.16  September 20, 2007
+
+    * Edited Makefile.PL to include the license field in META.yml
+      and change the contact e-mail address 
+
 0.15  April 6, 2007
     
     * Fixes in the example scripts
 
 0.14  April 6, 2007
 
-    * Minor fixes in Changes file.
-    * META.yml conforms to spec 1.0.
-    * Added an examples folder to the distribution.
+    * Minor fixes in Changes file
+    * META.yml conforms to spec 1.0
+    * Added an examples folder to the distribution
 
 0.13  February 26, 2007
 
-    * Code cleanup.
-    * Updated the documentation.
+    * Code cleanup
+    * Updated the documentation
 
 0.12  February 16, 2007
 
-    * Some code improvements.
+    * Some code improvements
 
 0.11  February 15, 2007
 
