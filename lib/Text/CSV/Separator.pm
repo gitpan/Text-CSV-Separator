@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 use Exporter;
 use base 'Exporter';
@@ -20,7 +20,7 @@ sub get_separator {
     
     # check options
     my $echo;
-    if (exists $options{echo} && $options{echo} eq 'on') {
+    if ($options{echo}) {
         $echo = 1;
         print "\nDetecting field separator of $file_path\n";
     }
@@ -198,7 +198,7 @@ sub _std_dev {
     my $sum = 0;
     $sum += ($_ - $mean)**2 foreach (@array);
     
-    my $std_dev = sqrt($sum / (scalar(@array) - 1));
+    my $std_dev = sqrt($sum / scalar(@array) );
     
     return $std_dev;
 }
@@ -289,7 +289,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.16 September 20, 2007
+Version 0.17 - November 29, 2007
 
 =head1 SYNOPSIS
 
@@ -299,7 +299,7 @@ Version 0.16 September 20, 2007
                                     path => $csv_path,
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
-                                    echo => 'on',           # optional
+                                    echo => 1,              # optional
                                  );
     
     my $separator;
@@ -323,7 +323,7 @@ Version 0.16 September 20, 2007
                                     lucky => 1, 
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
-                                    echo => 'on',           # optional
+                                    echo => 1,              # optional
                                  );
     
 
@@ -458,8 +458,6 @@ default candidate not considered, the pipe character):
                                     path => $csv_path,
                                     exclude => [':', '|'],
                                  );
-  
-    
     
     if (@char_list) {
         my $separator;
@@ -477,7 +475,6 @@ default candidate not considered, the pipe character):
                                     lucky => 1,
                                     exclude => [':', '|'],
                                   );
-    
     
 
 =head1 MOTIVATION
@@ -521,8 +518,8 @@ which follows a different approach.
 =head1 ACKNOWLEDGEMENTS
 
 Many thanks to Xavier Noria for wise suggestions.
-The author is also grateful to Thomas Zahreddin, Benjamin Erhart and
-Ferdinand Gassauer for valuable comments.
+The author is also grateful to Thomas Zahreddin, Benjamin Erhart, Ferdinand Gassauer,
+and Mario Krauss for valuable comments and bug reports.
 
 =head1 AUTHOR
 

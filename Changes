@@ -1,5 +1,16 @@
 Revision history for Perl extension Text::CSV::Separator
 
+0.17  November 29, 2007
+   
+    * Removed the restriction of the 'on' value to activate the echo option.
+      Now it will work with every true value.
+    * Changed the sample standard deviation formula to fix an 'Illegal division
+      by zero' bug detected by Mario Krauss that shows up in single-line csv
+      files for which it is not possible to determine the field separator
+      (the previous versions used the "sample" standard deviation formula,
+      with an N-1 denominator).
+    * Updated the documentation.
+
 0.16  September 20, 2007
 
     * Edited Makefile.PL to include the license field in META.yml
