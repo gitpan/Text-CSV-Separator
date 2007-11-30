@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 use Exporter;
 use base 'Exporter';
@@ -198,7 +198,7 @@ sub _std_dev {
     my $sum = 0;
     $sum += ($_ - $mean)**2 foreach (@array);
     
-    my $std_dev = sqrt($sum / scalar(@array) );
+    my $std_dev = sqrt( $sum / scalar(@array) );
     
     return $std_dev;
 }
@@ -289,17 +289,17 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.17 - November 29, 2007
+Version 0.18 - November 30, 2007
 
 =head1 SYNOPSIS
 
     use Text::CSV::Separator qw(get_separator);
     
     my @char_list = get_separator(
-                                    path => $csv_path,
+                                    path    => $csv_path,
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
-                                    echo => 1,              # optional
+                                    echo    => 1,           # optional
                                  );
     
     my $separator;
@@ -319,11 +319,11 @@ Version 0.17 - November 29, 2007
     # Don't forget to include the 'lucky' parameter
     
     my $separator = get_separator(
-                                    path => $csv_path,
-                                    lucky => 1, 
+                                    path    => $csv_path,
+                                    lucky   => 1, 
                                     exclude => $array1_ref, # optional
                                     include => $array2_ref, # optional
-                                    echo => 1,              # optional
+                                    echo    => 1,           # optional
                                  );
     
 
@@ -455,7 +455,7 @@ In this case, you should exclude the colon (and you can also exclude the other
 default candidate not considered, the pipe character):
 
     my @char_list = get_separator(
-                                    path => $csv_path,
+                                    path    => $csv_path,
                                     exclude => [':', '|'],
                                  );
     
@@ -471,8 +471,8 @@ default candidate not considered, the pipe character):
     # Using the "I'm Feeling Lucky" interface:
     
     my $separator = get_separator(
-                                    path => $csv_path,
-                                    lucky => 1,
+                                    path    => $csv_path,
+                                    lucky   => 1,
                                     exclude => [':', '|'],
                                   );
     

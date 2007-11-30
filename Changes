@@ -1,5 +1,9 @@
 Revision history for Perl extension Text::CSV::Separator
 
+0.18  November 30, 2007
+
+    * Minor cosmetic changes
+
 0.17  November 29, 2007
    
     * Removed the restriction of the 'on' value to activate the echo option.
