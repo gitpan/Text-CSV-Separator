@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Text-CSV-Separator
-version:             0.18
+version:             0.19
 abstract:            Determine the field separator of a CSV file
 license:             perl
 author:              

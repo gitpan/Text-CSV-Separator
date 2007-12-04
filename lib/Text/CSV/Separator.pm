@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 use Exporter;
 use base 'Exporter';
@@ -289,7 +289,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.18 - November 30, 2007
+Version 0.19 - December 4, 2007
 
 =head1 SYNOPSIS
 
@@ -304,14 +304,12 @@ Version 0.18 - November 30, 2007
     
     my $separator;
     if (@char_list) {
-        if (@char_list == 1) {     # successful detection
-          $separator = $char_list[0];
-      
-        } else {                   # several candidates passed the tests
-          warning message or any other action
-      
-    } else {                       # no candidate passed the tests
-          warning message or any other action
+        if (@char_list == 1) {           # successful detection
+            $separator = $char_list[0];
+        } else {                         # several candidates passed the tests
+            # Some code here
+    } else {                             # no candidate passed the tests
+            # Some code here
     }
     
     
@@ -462,9 +460,10 @@ default candidate not considered, the pipe character):
     if (@char_list) {
         my $separator;
         if (@char_list == 1) {       
-          $separator = $char_list[0];
-        } 
-    ...
+            $separator = $char_list[0];
+        } else { 
+            # Some code here
+        }
     }
     
     
