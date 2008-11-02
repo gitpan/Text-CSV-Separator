@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp qw(carp croak);
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 use Exporter;
 use base 'Exporter';
@@ -289,7 +289,7 @@ Text::CSV::Separator - Determine the field separator of a CSV file
 
 =head1 VERSION
 
-Version 0.19 - December 4, 2007
+Version 0.20 - November 2, 2008
 
 =head1 SYNOPSIS
 
@@ -309,7 +309,7 @@ Version 0.19 - December 4, 2007
         } else {                         # several candidates passed the tests
             # Some code here
     } else {                             # no candidate passed the tests
-            # Some code here
+        # Some code here
     }
     
     
@@ -401,7 +401,7 @@ most cases.
 
 =over 4
 
-=item get_separator(%options)
+=item C<get_separator(%options)>
 
 Returns an array containing the field separator character (or characters, if
 more than one candidate passed the tests) of a CSV file. In case no candidate
@@ -411,24 +411,24 @@ The available parameters are:
 
 =over 8
 
-=item path
+=item * C<path>
 
 Required. The path to the CSV file.
 
-=item exclude
+=item * C<exclude>
 
 Optional. Array containing characters to be excluded from the candidates list.
 
-=item include
+=item * C<include>
 
 Optional. Array containing characters to be included in the candidates list.
 
-=item lucky
+=item * C<lucky>
 
 Optional. If selected, get_separator will return one single character,
 or C<undef> in case no separator is detected. Off by default.
 
-=item echo
+=item * C<echo>
 
 Optional. Writes to the standard output messages describing the actions
 performed. Off by default.
